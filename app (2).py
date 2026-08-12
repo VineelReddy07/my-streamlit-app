@@ -459,54 +459,114 @@ def build_recommendation_report(fdf: pd.DataFrame, cycle_length: int, data_sourc
 
 
 # ======================================================================
-# 9. STREAMLIT UI
-# ======================================================================
 st.set_page_config(page_title="MetroFlow AI — Offline Signal Advisor", layout="wide", page_icon="🚦")
 
-# ---- Custom styling: distinct teal/navy academic-dashboard look ----
+# ---- Custom styling: navy dashboard base + subtle red/amber/green signal accents ----
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+:root {
+    --signal-red: #D64550;
+    --signal-amber: #F4B740;
+    --signal-green: #2BB673;
+    --navy-deep: #0B2545;
+    --navy-mid: #134074;
+    --ink: #0B2545;
+    --muted: #5A6B85;
+}
 html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
-h1, h2, h3 { font-family: 'Space Grotesk', sans-serif !important; }
+h1, h2, h3 { font-family: 'Space Grotesk', sans-serif !important; color: var(--ink); }
 
+/* ---------- Hero banner with a small animated traffic signal ---------- */
 .fs-hero {
     background: linear-gradient(120deg, #0B2545 0%, #134074 55%, #13315C 100%);
-    padding: 26px 30px; border-radius: 14px; color: #F2F6FC; margin-bottom: 18px;
-    box-shadow: 0 6px 18px rgba(11,37,69,0.25);
+    padding: 22px 30px; border-radius: 16px; color: #F2F6FC; margin-bottom: 18px;
+    box-shadow: 0 8px 22px rgba(11,37,69,0.28);
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
 }
-.fs-hero h1 { margin: 0; font-size: 1.9rem; }
-.fs-hero p { margin: 6px 0 0 0; color: #C9DAF0; font-size: 0.95rem; }
-
+.fs-hero-text h1 { margin: 0; font-size: 1.85rem; color: #F2F6FC; }
+.fs-hero-text p { margin: 6px 0 0 0; color: #C9DAF0; font-size: 0.95rem; }
 .fs-badge {
     display:inline-block; padding: 3px 10px; border-radius: 20px;
-    background: rgba(43,182,115,0.18); color:#2BB673; font-size:0.72rem;
-    font-weight:600; letter-spacing:0.04em; margin-top:8px;
+    background: rgba(43,182,115,0.18); color:#4FE3A0; font-size:0.72rem;
+    font-weight:600; letter-spacing:0.04em; margin-top:10px;
 }
+.fs-signal {
+    display:flex; flex-direction:column; gap:7px; background: rgba(255,255,255,0.06);
+    padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+}
+.fs-signal .dot { width:16px; height:16px; border-radius:50%; opacity:0.28; }
+.fs-signal .dot.red { background: var(--signal-red); }
+.fs-signal .dot.amber { background: var(--signal-amber); }
+.fs-signal .dot.green { background: var(--signal-green); }
+.fs-signal .dot.on { opacity:1; animation: fs-glow 2.4s ease-in-out infinite; }
+.fs-signal .dot.red.on { animation-delay: 0s; }
+.fs-signal .dot.amber.on { animation-delay: 0.8s; }
+.fs-signal .dot.green.on { animation-delay: 1.6s; }
+@keyframes fs-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+    50% { box-shadow: 0 0 14px 3px currentColor; }
+}
+.fs-signal .dot.red.on { color: var(--signal-red); }
+.fs-signal .dot.amber.on { color: var(--signal-amber); }
+.fs-signal .dot.green.on { color: var(--signal-green); }
 
+/* ---------- KPI cards: hover lift + coloured left accent ---------- */
 .fs-card {
-    background:#FFFFFF; border:1px solid #E7ECF3; border-radius:12px;
-    padding:16px 18px; box-shadow: 0 2px 8px rgba(19,64,116,0.06);
+    background:#FFFFFF; border:1px solid #E7ECF3; border-left: 4px solid var(--navy-mid);
+    border-radius:12px; padding:14px 18px; box-shadow: 0 2px 8px rgba(19,64,116,0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.fs-card .label { font-size:0.78rem; color:#5A6B85; font-weight:600; text-transform:uppercase; letter-spacing:0.03em;}
-.fs-card .value { font-size:1.55rem; color:#0B2545; font-weight:700; font-family:'Space Grotesk',sans-serif; }
+.fs-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(19,64,116,0.14); }
+.fs-card.accent-green { border-left-color: var(--signal-green); }
+.fs-card.accent-amber { border-left-color: var(--signal-amber); }
+.fs-card.accent-red { border-left-color: var(--signal-red); }
+.fs-card .label { font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.03em;}
+.fs-card .value { font-size:1.5rem; color:var(--ink); font-weight:700; font-family:'Space Grotesk',sans-serif; margin-top:2px;}
 
 .fs-note {
-    background:#EFF6FF; border-left:4px solid #134074; padding:10px 14px;
-    border-radius:6px; font-size:0.88rem; color:#0B2545;
+    background:#EFF6FF; border-left:4px solid var(--navy-mid); padding:10px 14px;
+    border-radius:6px; font-size:0.88rem; color:var(--ink);
 }
 .fs-sim-tag {
-    display:inline-block; background:#FDECEA; color:#D64550; font-weight:700;
+    display:inline-block; background:#FDECEA; color:var(--signal-red); font-weight:700;
     padding:2px 10px; border-radius:6px; font-size:0.72rem; letter-spacing:0.05em;
 }
+
+/* ---------- Tabs: clearer active state, signal-green underline ---------- */
+.stTabs [data-baseweb="tab-list"] { gap: 4px; border-bottom: 1px solid #E7ECF3; }
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px 8px 0 0; padding: 8px 14px; font-weight: 600; color: var(--muted);
+}
+.stTabs [aria-selected="true"] {
+    color: var(--navy-deep) !important; background: #EFF6FF;
+    border-bottom: 3px solid var(--signal-green) !important;
+}
+
+/* ---------- Buttons: signal-green primary action ---------- */
+button[kind="primary"] {
+    background: linear-gradient(120deg, var(--signal-green), #23A065) !important;
+    border: none !important; transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+button[kind="primary"]:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(43,182,115,0.35); }
+
+/* ---------- Sidebar: subtle navy tint ---------- */
+[data-testid="stSidebar"] { background: #F6F9FD; border-right: 1px solid #E7ECF3; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <div class="fs-hero">
-    <h1>🚦 MetroFlow AI</h1>
-    <p>Offline congestion analytics &amp; signal-timing advisor.</p>
-    <span class="fs-badge">ADVISORY ONLY · NO REAL-TIME CONTROL</span>
+    <div class="fs-hero-text">
+        <h1>🚦 MetroFlow AI</h1>
+        <p>Offline congestion analytics &amp; signal-timing advisor.</p>
+        <span class="fs-badge">ADVISORY ONLY · NO REAL-TIME CONTROL</span>
+    </div>
+    <div class="fs-signal" title="Analysing traffic flow">
+        <div class="dot red on"></div>
+        <div class="dot amber on"></div>
+        <div class="dot green on"></div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -680,16 +740,24 @@ if fdf.empty:
 
 # ---------------- KPI cards (kept to the 4 that matter most) ----------------
 worst_row = fdf.groupby("intersection")["congestion_score"].mean().idxmax()
+avg_congestion = fdf["congestion_score"].mean()
+
+def _congestion_accent(score):
+    if score < 55:
+        return "accent-green"
+    elif score < 80:
+        return "accent-amber"
+    return "accent-red"
 
 k1, k2, k3, k4 = st.columns(4)
 kpis = [
-    (k1, "Avg volume", f"{fdf['vehicles_per_min'].mean():.1f} v/min"),
-    (k2, "Avg speed", f"{fdf['average_speed_kmh'].mean():.1f} km/h"),
-    (k3, "Avg congestion", f"{fdf['congestion_score'].mean():.0f}/100"),
-    (k4, "Worst congestion at", worst_row),
+    (k1, "Avg volume", f"{fdf['vehicles_per_min'].mean():.1f} v/min", ""),
+    (k2, "Avg speed", f"{fdf['average_speed_kmh'].mean():.1f} km/h", "accent-green"),
+    (k3, "Avg congestion", f"{avg_congestion:.0f}/100", _congestion_accent(avg_congestion)),
+    (k4, "Worst congestion at", worst_row, "accent-red"),
 ]
-for col, label, value in kpis:
-    col.markdown(f'<div class="fs-card"><div class="label">{label}</div><div class="value">{value}</div></div>',
+for col, label, value, accent in kpis:
+    col.markdown(f'<div class="fs-card {accent}"><div class="label">{label}</div><div class="value">{value}</div></div>',
                  unsafe_allow_html=True)
 
 st.write("")
@@ -753,7 +821,10 @@ with tabs[1]:
     st.subheader("Intersection Comparison")
     comp = fdf.groupby("intersection", as_index=False)["congestion_score"].mean()
     bar_fig = px.bar(comp, x="intersection", y="congestion_score",
-                      color="congestion_score", color_continuous_scale="Sunsetdark")
+                      color="congestion_score",
+                      color_continuous_scale=[BAND_COLORS["Low"], BAND_COLORS["Moderate"],
+                                               BAND_COLORS["High"], BAND_COLORS["Severe"]],
+                      range_color=[0, 100])
     bar_fig.update_layout(height=320, yaxis_title="Avg congestion score")
     st.plotly_chart(bar_fig, use_container_width=True)
 
